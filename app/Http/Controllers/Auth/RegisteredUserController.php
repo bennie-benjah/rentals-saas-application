@@ -1,9 +1,11 @@
 <?php
+
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+else;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -24,7 +26,6 @@ class RegisteredUserController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role'     => 'required|string|in:tenant,landlord', // Whitelist roles strictly
         ]);
 
         $user = User::create([
@@ -33,16 +34,9 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // Assign Spatie Role
-        $user->assignRole($request->role);
-
         Auth::login($user);
 
-        // Redirect based on role
-        if ($user->hasRole('landlord')) {
-            return redirect()->route('dashboard');
-        }
-
-        return redirect()->route('tenant.index');
+        // Always redirect newly registered users to the role choice onboarding page
+        return redirect()->route('onboarding.role');
     }
 }

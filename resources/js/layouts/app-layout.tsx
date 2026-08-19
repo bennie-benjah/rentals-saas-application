@@ -1,37 +1,40 @@
-
-import { Link } from "@inertiajs/react";
-import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
+import { Link, usePage } from "@inertiajs/react";
+import { ChevronRight } from "lucide-react";
 import DashboardLayout from "@/layouts/dashboard-layout";
+import TenantLayout from "@/layouts/tenant-layout";
 import type { BreadcrumbItem } from "@/types";
-
-interface AppLayoutProps {
-  breadcrumbs?: BreadcrumbItem[];
-  children: ReactNode;
-  /**
-   * Set `isGuest` to true for public pricing, landing, login, and registration pages
-   * so they render full-width without the Dashboard sidebar or `md:pl-64` offset.
-   */
-  isGuest?: boolean;
-}
 
 export default function AppLayout({
   breadcrumbs = [],
   children,
   isGuest = false,
-}: AppLayoutProps) {
-  // Guest / Public Layout (Pricing, Auth, Landlord Onboarding)
+}: {
+  breadcrumbs?: BreadcrumbItem[];
+  children: ReactNode;
+  isGuest?: boolean;
+}) {
+  const { props } = usePage<{
+    auth?: { user?: { account_type?: string; roles?: (string | { name: string })[] } };
+  }>();
+
+  // If page is flagged as guest/public, bypass dashboard shells
   if (isGuest) {
     return (
-      <div className="min-h-screen w-full bg-background text-foreground flex flex-col">
+      <main className="min-h-screen w-full bg-background text-foreground">
         {children}
-      </div>
+      </main>
     );
   }
 
-  // Dashboard / Authenticated Layout
+  const user = props.auth?.user;
+  const roleNames = (user?.roles ?? []).map((r) => (typeof r === "string" ? r : r.name));
+  const isTenant = roleNames.includes("tenant") || user?.account_type === "tenant";
+
+  const Shell = isTenant ? TenantLayout : DashboardLayout;
+
   return (
-    <DashboardLayout>
+    <Shell>
       {breadcrumbs.length > 0 && (
         <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-6">
           {breadcrumbs.map((item, i) => (
@@ -49,6 +52,6 @@ export default function AppLayout({
         </nav>
       )}
       {children}
-    </DashboardLayout>
+    </Shell>
   );
 }

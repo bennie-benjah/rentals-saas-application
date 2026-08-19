@@ -13,12 +13,13 @@ class RegisterLandlordRequest extends FormRequest
 
     public function rules(): array
     {
+        $userId = $this->user()?->id;
         return [
             // Owner / User fields
             'firstName' => ['required', 'string', 'max:255'],
             'lastName' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $userId],
+        'password' => $userId ? ['nullable', 'string'] : ['required', 'string', 'min:8'],
             'phone' => ['required', 'string', 'max:50'],
             'dob' => ['nullable', 'date'],
             'country' => ['required', 'string', 'max:255'],

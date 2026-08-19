@@ -1,17 +1,22 @@
 <?php
 
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\Auth\LandlordRegisterController;
+use App\Http\Controllers\Auth\TenantRegisterController;
+use App\Http\Controllers\Tenant\NotificationController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IdDocumentController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\MaintenanceRequestController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PropertyController;
-use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\RegistrationController;
-use App\Http\Controllers\Auth\LandlordRegisterController;
+use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\Webhooks\MpesaWebhookController;
@@ -40,18 +45,19 @@ Route::prefix('legal')->name('legal.')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Registration & Onboarding (Guest-Only)
+| Registration & Onboarding (Accessible by Guests AND Authenticated Users)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('guest')->group(function () {
-    Route::get('/register/landlord', [LandlordRegisterController::class, 'create'])->name('register.landlord');
-    Route::post('/register/landlord', [LandlordRegisterController::class, 'store']);
-});
+Route::get('/register/landlord', [LandlordRegisterController::class, 'create'])->name('register.landlord');
+Route::post('/register/landlord', [LandlordRegisterController::class, 'store']);
+
+Route::get('/register/tenant', [TenantRegisterController::class, 'createTenant'])->name('register.tenant');
+Route::post('/register/tenant', [TenantRegisterController::class, 'storeTenant']);
 
 /*
 |--------------------------------------------------------------------------
-| Landlord Dashboard (Auth + Verified + Role: Landlord/Admin)
+| Landlord Dashboard (Auth + Verified + Role: Landlord/Admin/Reviewer)
 |--------------------------------------------------------------------------
 */
 
@@ -91,10 +97,16 @@ Route::middleware(['auth', 'verified', 'role:landlord|admin|reviewer'])
         // Roles & Permissions Management
         Route::get('/roles-permissions', [RolePermissionController::class, 'index'])->name('roles-permissions');
         Route::put('/roles/{role}/permissions', [RolePermissionController::class, 'updateRolePermissions'])->name('roles.update-permissions');
-        
+
         // Settings & Verification
         Route::get('/settings', fn () => Inertia::render('dashboard/settings'))->name('settings');
         Route::get('/verification', fn () => Inertia::render('dashboard/verification'))->name('verification');
+
+        // Admin User Management
+        Route::middleware(['role:admin'])->group(function () {
+            Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+            Route::put('/users/{user}/roles', [AdminUserController::class, 'updateRoles'])->name('users.update-roles');
+        });
     });
 
 /*
@@ -102,7 +114,10 @@ Route::middleware(['auth', 'verified', 'role:landlord|admin|reviewer'])
 | Tenant Portal (Auth + Verified + Role: Tenant)
 |--------------------------------------------------------------------------
 */
-
+Route::middleware(['auth'])->group(function () {
+    Route::get('/onboarding/role', [OnboardingController::class, 'showRoleSelection'])->name('onboarding.role');
+    Route::post('/onboarding/role', [OnboardingController::class, 'setRole'])->name('onboarding.role.set');
+});
 Route::middleware(['auth', 'verified', 'role:tenant|reviewer|admin'])
     ->prefix('tenant')
     ->name('tenant.')
@@ -113,6 +128,8 @@ Route::middleware(['auth', 'verified', 'role:tenant|reviewer|admin'])
         Route::get('/maintenance', [MaintenanceRequestController::class, 'index'])->name('maintenance');
         Route::post('/maintenance', [MaintenanceRequestController::class, 'store'])->name('maintenance.store');
         Route::get('/messages', [ConversationController::class, 'index'])->name('messages');
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('tenant.notifications.index');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('tenant.notifications.read');
     });
 
 /*

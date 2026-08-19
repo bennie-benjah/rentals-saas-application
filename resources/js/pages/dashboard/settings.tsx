@@ -118,7 +118,7 @@ function Settings({ auth }: SettingsProps) {
               disabled={processing}
               className="px-4 py-2 bg-primary text-primary-foreground text-xs font-medium rounded-lg disabled:opacity-50"
             >
-              {processing ? "Saving..." : "Save Profile"}
+              {processing ? "Saving..." : "Edit Profile"}
             </button>
             {recentlySuccessful && (
               <span className="text-xs text-success">Saved successfully.</span>

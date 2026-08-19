@@ -14,122 +14,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
-
-class RegistrationController extends Controller
+use Inertia\Inertia;
+use Inertia\Response;
+class TenantRegisterController extends Controller
 {
-    /**
-     * POST /register/landlord
-     */
-    public function storeLandlord(Request $request): RedirectResponse
+    
+    public function createTenant(): Response
     {
-        $data = $request->validate([
-            'firstName' => ['required', 'string', 'max:100'],
-            'lastName' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
-            'password' => ['required', Password::defaults()],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'ownerType' => ['nullable', 'string', 'max:50'],
-            'dob' => ['nullable', 'date'],
-            'idType' => ['nullable', 'string', 'max:50'],
-            'idNumber' => ['nullable', 'string', 'max:100'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'country' => ['nullable', 'string', 'max:100'],
-            'legalName' => ['nullable', 'string', 'max:255'],
-            'entityType' => ['nullable', 'string', 'max:100'],
-            'taxId' => ['nullable', 'string', 'max:100'],
-            'yearsOperating' => ['nullable', 'string', 'max:50'],
-            'portfolioSize' => ['nullable', 'string', 'max:50'],
-            'website' => ['nullable', 'url', 'max:255'],
-            'propName' => ['nullable', 'string', 'max:255'],
-            'propType' => ['nullable', 'string', 'max:100'],
-            'propAddress' => ['nullable', 'string', 'max:255'],
-            'units' => ['nullable', 'integer', 'min:1'],
-            'yearBuilt' => ['nullable', 'integer', 'min:1800', 'max:'.date('Y')],
-            'monthlyRent' => ['nullable', 'numeric', 'min:0'],
-            'amenities' => ['nullable', 'array'],
-            'payoutMethod' => ['nullable', 'string', 'max:50'],
-            'bankName' => ['nullable', 'string', 'max:100'],
-            'accountName' => ['nullable', 'string', 'max:100'],
-            'accountNumber' => ['nullable', 'string', 'max:100'],
-            'routingNumber' => ['nullable', 'string', 'max:100'],
-            'mpesaNumber' => ['nullable', 'string', 'max:30'],
-            'paypalEmail' => ['nullable', 'email', 'max:255'],
-            'currency' => ['nullable', 'string', 'size:3'],
-            'proofType' => ['nullable', 'string', 'max:100'],
-            'tosAck' => ['required', 'accepted'],
-            'taxAck' => ['nullable', 'boolean'],
-            'signature' => ['nullable', 'string'],
-        ]);
-
-        $user = DB::transaction(function () use ($data) {
-            $user = User::create([
-                'name' => trim($data['firstName'].' '.$data['lastName']),
-                'email' => $data['email'],
-                'password' => Hash::make($data['password']),
-                'account_type' => 'landlord',
-                'email_verified_at' => now(),
-            ]);
-
-            // Explicit server-side Spatie role binding
-            $user->assignRole('landlord');
-
-            LandlordProfile::create([
-                'user_id' => $user->id,
-                'owner_type' => $data['ownerType'] ?? null,
-                'dob' => $data['dob'] ?? null,
-                'id_type' => $data['idType'] ?? null,
-                'id_number' => $data['idNumber'] ?? null,
-                'address' => $data['address'] ?? null,
-                'city' => $data['city'] ?? null,
-                'country' => $data['country'] ?? null,
-                'legal_name' => $data['legalName'] ?? null,
-                'entity_type' => $data['entityType'] ?? null,
-                'tax_id' => $data['taxId'] ?? null,
-                'years_operating' => $data['yearsOperating'] ?? null,
-                'portfolio_size' => $data['portfolioSize'] ?? null,
-                'website' => $data['website'] ?? null,
-                'payout_method' => $data['payoutMethod'] ?? null,
-                'bank_name' => $data['bankName'] ?? null,
-                'account_name' => $data['accountName'] ?? null,
-                'account_number' => $data['accountNumber'] ?? null,
-                'routing_number' => $data['routingNumber'] ?? null,
-                'mpesa_number' => $data['mpesaNumber'] ?? null,
-                'paypal_email' => $data['paypalEmail'] ?? null,
-                'currency' => $data['currency'] ?? null,
-                'proof_type' => $data['proofType'] ?? null,
-                'tos_ack' => (bool) ($data['tosAck'] ?? false),
-                'tax_ack' => (bool) ($data['taxAck'] ?? false),
-                'signature' => $data['signature'] ?? null,
-            ]);
-
-            if (! empty($data['propName'])) {
-                Property::create([
-                    'landlord_id' => $user->id,
-                    'name' => $data['propName'],
-                    'type' => $data['propType'] ?? null,
-                    'address' => $data['propAddress'] ?? null,
-                    'city' => $data['city'] ?? null,
-                    'country' => $data['country'] ?? null,
-                    'year_built' => $data['yearBuilt'] ?? null,
-                    'total_units' => $data['units'] ?? null,
-                    'monthly_rent' => $data['monthlyRent'] ?? null,
-                    'amenities' => $data['amenities'] ?? [],
-                ]);
-            }
-
-            return $user;
-        });
-
-        event(new Registered($user));
-        Auth::login($user);
-
-        return redirect()->route('dashboard');
+        return Inertia::render('register/tenant'); // Adjust path to match your React component
     }
-
-    /**
-     * POST /register/tenant
-     */
     public function storeTenant(Request $request): RedirectResponse
     {
         $data = $request->validate([
