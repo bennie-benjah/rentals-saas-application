@@ -100,4 +100,13 @@ class InvoiceController extends Controller
 
         return response()->json($invoice->load('payments'));
     }
+    public function checkout(Request $request, Invoice $invoice)
+{
+    // Ensure tenant can only view their own invoice
+    Gate::authorize('view', $invoice);
+
+    return Inertia::render('tenant/payments/checkout', [
+        'invoice' => $invoice->load(['lease.unit.property']),
+    ]);
+}
 }

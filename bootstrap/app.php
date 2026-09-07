@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\IdentifyLandlordSubdomain;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // 1. Enable Sanctum stateful API for subdomains
+        $middleware->statefulApi();
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
@@ -30,6 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'user-active' => \App\Http\Middleware\EnsureUserIsActive::class,
+            'subdomain' => IdentifyLandlordSubdomain::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
@@ -37,28 +43,24 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/paypal',
         ]);
 
-        // Dynamically redirect authenticated users away from guest routes
-        // Dynamically redirect authenticated users away from guest routes
-// In bootstrap/app.php
-$middleware->redirectTo(
-    guests: '/login',
-    users: function (Request $request) {
-        $user = $request->user();
+        $middleware->redirectTo(
+            guests: '/login',
+            users: function (Request $request) {
+                $user = $request->user();
 
-        if ($user?->hasRole('tenant')) {
-            return route('tenant.index');
-        }
+                if ($user?->hasRole('tenant')) {
+                    return route('tenant.index');
+                }
 
-        if ($user?->hasRole(['reviewer', 'admin', 'landlord'])) {
-            // Direct reviewers to the verification dashboard or main dashboard
-            return $user->hasRole('reviewer')
-                ? route('dashboard.verification')
-                : route('dashboard');
-        }
+                if ($user?->hasRole(['reviewer', 'admin', 'landlord'])) {
+                    return $user->hasRole('reviewer')
+                        ? route('dashboard.verification')
+                        : route('dashboard');
+                }
 
-        return route('home');
-    }
-);
+                return route('home');
+            }
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -4,6 +4,20 @@ import { UsageMeter } from "@/components/dashboard/UsageMeter";
 import DashboardLayout from "@/layouts/dashboard-layout";
 import { InviteTenantModal } from "@/components/dashboard/InviteTenantModal";
 
+interface UnitOption {
+  id: number;
+  unit_number: string;
+  rent_amount: number;
+  status: string;
+  property?: { id: number; name: string };
+}
+
+interface TenantOption {
+  id: number;
+  name: string;
+  email: string;
+}
+
 interface LeaseItem {
   id: number;
   rent_amount: number;
@@ -27,7 +41,9 @@ interface LeaseItem {
 }
 
 interface TenantsPageProps {
-  leases: LeaseItem[];
+  leases?: LeaseItem[];
+  units?: UnitOption[];
+  tenants?: TenantOption[];
 }
 
 const toneCls: Record<string, string> = {
@@ -37,15 +53,13 @@ const toneCls: Record<string, string> = {
   terminated: "bg-destructive/10 text-destructive",
 };
 
-function Tenants({ leases = [] }: TenantsPageProps) {
+function Tenants({ leases = [], units = [], tenants = [] }: TenantsPageProps) {
   const [search, setSearch] = useState("");
   const [isInviteOpen, setIsInviteOpen] = useState(false);
 
-  // Compute stats dynamically from the leases array
   const activeCount = leases.filter((l) => l.status === "active").length;
   const pendingCount = leases.filter((l) => l.status === "pending").length;
 
-  // Filter leases by tenant name, email, or property name
   const filteredLeases = leases.filter((l) => {
     const tenantName = l.tenant?.name?.toLowerCase() || "";
     const tenantEmail = l.tenant?.email?.toLowerCase() || "";
@@ -81,7 +95,7 @@ function Tenants({ leases = [] }: TenantsPageProps) {
 
       <UsageMeter resource="tenants" label="Tenants" />
 
-      {/* Search Input */}
+      {/* Search Bar */}
       <div className="flex items-center gap-2 px-3 py-2 bg-surface rounded-lg ring-1 ring-border">
         <Search className="size-4 text-muted-foreground" />
         <input
@@ -92,7 +106,7 @@ function Tenants({ leases = [] }: TenantsPageProps) {
         />
       </div>
 
-      {/* Tenants/Leases Table */}
+      {/* Table */}
       <div className="bg-surface ring-1 ring-border rounded-2xl overflow-hidden">
         <div className="hidden md:grid grid-cols-12 px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground border-b border-border">
           <div className="col-span-4">Tenant</div>
@@ -120,7 +134,6 @@ function Tenants({ leases = [] }: TenantsPageProps) {
                   key={l.id}
                   className="px-5 py-4 grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-0 items-center hover:bg-foreground/[0.02] transition-colors"
                 >
-                  {/* Tenant Column */}
                   <div className="md:col-span-4 flex items-center gap-3">
                     <div className="size-9 rounded-full bg-gradient-to-br from-foreground/20 to-foreground/5 flex items-center justify-center font-medium text-xs">
                       {tenantName.charAt(0).toUpperCase()}
@@ -133,17 +146,14 @@ function Tenants({ leases = [] }: TenantsPageProps) {
                     </div>
                   </div>
 
-                  {/* Property / Unit Column */}
                   <div className="md:col-span-4 text-sm text-muted-foreground">
                     {propName} {unitLabel ? `· ${unitLabel}` : ""}
                   </div>
 
-                  {/* Rent Amount */}
                   <div className="md:col-span-2 font-mono text-sm">
                     {formattedRent}
                   </div>
 
-                  {/* Status Badge */}
                   <div className="md:col-span-2 md:text-right">
                     <span
                       className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded-full ${
@@ -160,10 +170,12 @@ function Tenants({ leases = [] }: TenantsPageProps) {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modal with options passed down */}
       <InviteTenantModal
         isOpen={isInviteOpen}
         onClose={() => setIsInviteOpen(false)}
+        units={units}
+        tenants={tenants}
       />
     </div>
   );

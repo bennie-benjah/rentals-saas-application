@@ -15,6 +15,15 @@ interface MessagesPanelProps {
 export function MessagesPanel({ recentMessages = [] }: MessagesPanelProps) {
   const safeMessages = Array.isArray(recentMessages) ? recentMessages : [];
 
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <div className="p-6 bg-surface rounded-2xl ring-1 ring-border flex flex-col">
       <div className="flex items-center justify-between mb-6">
@@ -27,9 +36,13 @@ export function MessagesPanel({ recentMessages = [] }: MessagesPanelProps) {
           <p className="text-xs text-muted-foreground py-4 text-center">No recent messages</p>
         ) : (
           safeMessages.map((m) => (
-            <div key={m.id} className="flex gap-3 group cursor-pointer">
-              <div className="size-8 rounded-full bg-gradient-to-br from-foreground/15 to-foreground/5 shrink-0 relative flex items-center justify-center font-medium text-xs">
-                {m.name.charAt(0)}
+            <Link
+              key={m.id}
+              href={`/dashboard/messages?active=${m.id}`}
+              className="flex gap-3 group cursor-pointer"
+            >
+              <div className="size-8 rounded-full bg-muted shrink-0 relative flex items-center justify-center font-medium text-xs text-foreground">
+                {getInitials(m.name)}
                 {m.unread && (
                   <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-warning ring-2 ring-surface" />
                 )}
@@ -43,7 +56,7 @@ export function MessagesPanel({ recentMessages = [] }: MessagesPanelProps) {
                   {m.body}
                 </p>
               </div>
-            </div>
+            </Link>
           ))
         )}
       </div>

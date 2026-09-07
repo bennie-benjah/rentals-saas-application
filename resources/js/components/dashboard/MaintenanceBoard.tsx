@@ -15,6 +15,7 @@ export type Ticket = {
 export type Unit = {
   id: number;
   name: string;
+  property_id?: number;
 };
 
 const columns: { key: Status; label: string; dot: string }[] = [
@@ -41,10 +42,12 @@ export function MaintenanceBoard({
   const onDrop = (status: Status) => {
     if (draggedId === null) return;
 
+    // Optimistically update frontend state
     setTickets((prev) =>
       prev.map((t) => (t.id === draggedId ? { ...t, status } : t))
     );
 
+    // Persist status change to backend
     router.patch(
       `/dashboard/maintenance/${draggedId}/status`,
       { status },
@@ -60,7 +63,7 @@ export function MaintenanceBoard({
   return (
     <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
-       
+        <h2 className="font-display font-medium text-lg">Maintenance Requests</h2>
         <button
           onClick={() => setIsModalOpen(true)}
           className="py-2 px-3 flex items-center gap-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
@@ -110,7 +113,7 @@ export function MaintenanceBoard({
         })}
       </div>
 
-      {/* Modal */}
+      {/* Ticket Creation Modal */}
       <AddMaintenanceTicketModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

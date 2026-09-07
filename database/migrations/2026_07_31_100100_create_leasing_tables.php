@@ -53,8 +53,8 @@ return new class extends Migration
             $table->decimal('amount_due', 12, 2);
             $table->decimal('amount_paid', 12, 2)->default(0);
             $table->string('currency', 3)->default('KES');
-            $table->date('period_start');
-            $table->date('period_end');
+            $table->date('period_start')->nullable()->change();
+            $table->date('period_end')->nullable()->change();
             $table->date('due_date');
             $table->enum('status', ['unpaid', 'partial', 'paid', 'overdue', 'void'])->default('unpaid');
             $table->timestamp('reminder_sent_at')->nullable();

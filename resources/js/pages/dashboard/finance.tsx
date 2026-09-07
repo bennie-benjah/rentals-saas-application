@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { useState, FormEvent } from "react";
+import { useForm } from "@inertiajs/react";
 import { RevenueChart, RevenueChartItem } from "@/components/dashboard/RevenueChart";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Plus, Send, X } from "lucide-react";
 import DashboardLayout from "@/layouts/dashboard-layout";
 
 interface StatsProps {
@@ -20,13 +22,39 @@ interface LedgerItem {
   tone: "in" | "out";
 }
 
+interface LeaseOption {
+  id: number;
+  tenantName: string;
+  unitName: string;
+}
+
 interface FinanceProps {
   stats?: StatsProps;
   revenueChart?: RevenueChartItem[];
   ledger?: LedgerItem[];
+  leases?: LeaseOption[];
 }
 
-function Finance({ stats, revenueChart = [], ledger = [] }: FinanceProps) {
+function Finance({ stats, revenueChart = [], ledger = [], leases = [] }: FinanceProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const { data, setData, post, processing, errors, reset } = useForm({
+    lease_id: "",
+    amount: "",
+    due_date: "",
+    details: "",
+  });
+
+  const handleSendInvoice = (e: FormEvent) => {
+    e.preventDefault();
+    post("/dashboard/invoices", {
+      onSuccess: () => {
+        reset();
+        setIsModalOpen(false);
+      },
+    });
+  };
+
   const statItems = [
     { label: "Collected (MTD)", value: stats?.collectedMtd ?? "$0.00", delta: "+0.0%", up: true },
     { label: "Outstanding", value: stats?.outstanding ?? "$0.00", delta: "0%", up: false },
@@ -36,9 +64,17 @@ function Finance({ stats, revenueChart = [], ledger = [] }: FinanceProps) {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-2xl md:text-3xl font-medium tracking-tight">Finance</h1>
-        <p className="text-sm text-muted-foreground mt-1">Real-time revenue and expense tracking</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl md:text-3xl font-medium tracking-tight">Finance</h1>
+          <p className="text-sm text-muted-foreground mt-1">Real-time revenue and expense tracking</p>
+        </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="size-4" /> Send Invoice
+        </button>
       </div>
 
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-5">
@@ -105,6 +141,116 @@ function Finance({ stats, revenueChart = [], ledger = [] }: FinanceProps) {
           )}
         </ul>
       </section>
+
+      {/* Full-Viewport Modal Viewport */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-md p-6 sm:p-10 md:p-12 overflow-hidden animate-in fade-in duration-200">
+          <div className="w-full max-w-5xl mx-auto h-100px flex flex-col justify-between bg-surface border border-border rounded-3xl p-6 sm:p-10 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border pb-5">
+              <div>
+                <h3 className="font-display text-2xl md:text-3xl font-medium">Create & Send Invoice</h3>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">Issue a new digital payment request to an active lease.</p>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <X className="size-6" />
+              </button>
+            </div>
+
+            {/* Form Body - 2 Column Layout for Desktop Spacing */}
+            <form onSubmit={handleSendInvoice} className="flex-1 my-6 flex flex-col justify-between space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Select Tenant / Lease
+                  </label>
+                  <select
+                    value={data.lease_id}
+                    onChange={(e) => setData("lease_id", e.target.value)}
+                    className="w-full rounded-2xl border border-border bg-background p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    required
+                  >
+                    <option value="">Select active lease...</option>
+                    {leases.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.tenantName} ({l.unitName})
+                      </option>
+                    ))}
+                  </select>
+                  {errors.lease_id && <p className="text-xs text-destructive mt-1.5">{errors.lease_id}</p>}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                      Amount ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={data.amount}
+                      onChange={(e) => setData("amount", e.target.value)}
+                      className="w-full rounded-2xl border border-border bg-background p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      required
+                    />
+                    {errors.amount && <p className="text-xs text-destructive mt-1.5">{errors.amount}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                      Due Date
+                    </label>
+                    <input
+                      type="date"
+                      value={data.due_date}
+                      onChange={(e) => setData("due_date", e.target.value)}
+                      className="w-full rounded-2xl border border-border bg-background p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      required
+                    />
+                    {errors.due_date && <p className="text-xs text-destructive mt-1.5">{errors.due_date}</p>}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Details / Line Item Description
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Provide additional details (e.g. Monthly Rent, Water Bill, Maintenance Charges)..."
+                    value={data.details}
+                    onChange={(e) => setData("details", e.target.value)}
+                    className="w-full rounded-2xl border border-border bg-background p-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex items-center justify-end gap-4 pt-4 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-6 py-3 text-sm font-medium border border-border rounded-xl hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={processing}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  <Send className="size-4" />
+                  {processing ? "Sending..." : "Send Invoice"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

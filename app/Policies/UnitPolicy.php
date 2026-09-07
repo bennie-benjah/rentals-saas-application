@@ -22,10 +22,11 @@ class UnitPolicy
         return $user->hasRole('landlord');
     }
 
-    public function update(User $user, Unit $unit): bool
-    {
-        return $user->hasRole('admin') || $unit->property->landlord_id === $user->id;
-    }
+    // App\Policies\UnitPolicy.php
+public function update(User $user, Unit $unit): bool
+{
+    return $user->id === $unit->property->landlord_id;
+}
 
     public function delete(User $user, Unit $unit): bool
     {

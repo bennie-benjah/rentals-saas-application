@@ -105,30 +105,22 @@ $unit = Unit::with('property')->findOrFail($unitId);
 
     public function updateStatus(Request $request, MaintenanceRequest $maintenanceRequest)
     {
-        $this->authorize('update', $maintenanceRequest);
-
         $validated = $request->validate([
             'status' => 'required|in:todo,progress,done',
         ]);
 
-        $dbStatusMap = [
-            'todo' => 'to_do',
+        // Map status key back to database values
+        $dbStatus = match($validated['status']) {
             'progress' => 'in_progress',
             'done' => 'resolved',
-        ];
-
-        $newStatus = $dbStatusMap[$validated['status']];
-        $wasStatus = $maintenanceRequest->status;
+            default => 'pending',
+        };
 
         $maintenanceRequest->update([
-            'status' => $newStatus,
-            'resolved_at' => $newStatus === 'resolved' ? now() : null,
+            'status' => $dbStatus,
+            'resolved_at' => $dbStatus === 'resolved' ? now() : null,
         ]);
 
-        if ($newStatus !== $wasStatus && $maintenanceRequest->tenant) {
-            $maintenanceRequest->tenant->notify(new MaintenanceStatusChanged($maintenanceRequest));
-        }
-
-        return back()->with('success', 'Status updated.');
+        return back();
     }
 }

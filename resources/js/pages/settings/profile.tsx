@@ -24,6 +24,7 @@ type LandlordData = {
     years_operating?: number | string;
     portfolio_size?: number | string;
     website?: string;
+    subdomain?: string;
     payout_method?: string;
     bank_name?: string;
     account_name?: string;
@@ -421,7 +422,47 @@ export default function Profile({
                                     onChange={(e) => form.setData('website', e.target.value)}
                                 />
                             </div>
+{/* Landlord Subdomain & Portal Sharing Block */}
+<div className="mt-8 border-t pt-6 space-y-4">
+    <Heading
+        variant="small"
+        title="Tenant Portal & Subdomain"
+        description="Share this link with prospective tenants to register directly into your property workspace."
+    />
 
+    <div className="rounded-lg border bg-card p-4 space-y-3">
+        <div className="grid gap-2">
+            <Label htmlFor="subdomain_link">Your Tenant Registration Link</Label>
+            <div className="flex gap-2">
+                <Input
+                    id="subdomain_link"
+                    readOnly
+                    value={
+                        landlord?.subdomain
+                            ? `http://${landlord.subdomain}.estateos.test/register`
+                            : 'No subdomain configured yet.'
+                    }
+                    className="bg-muted text-muted-foreground font-mono text-sm"
+                />
+                <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!landlord?.subdomain}
+                    onClick={() => {
+                        if (landlord?.subdomain) {
+                            navigator.clipboard.writeText(
+                                `http://${landlord.subdomain}.estateos.test/register`
+                            );
+                            alert('Portal link copied to clipboard!');
+                        }
+                    }}
+                >
+                    Copy
+                </Button>
+            </div>
+        </div>
+    </div>
+</div>
                             <div className="grid gap-2">
                                 <Label htmlFor="payout_method">Payout Method</Label>
                                 <Input

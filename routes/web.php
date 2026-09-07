@@ -1,51 +1,97 @@
 <?php
 
+use App\Http\Controllers\Admin\DomainManagementController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\Auth\LandlordRegisterController;
 use App\Http\Controllers\Auth\TenantRegisterController;
-use App\Http\Controllers\Tenant\NotificationController;
-use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\ConversationController;
-use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IdDocumentController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\LandlordPortalController;
+use App\Http\Controllers\Landlord\LandlordInvoiceController;
+use App\Http\Controllers\LegalController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\MaintenanceRequestController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PlanController;
+use App\Http\Controllers\PricingController;
 use App\Http\Controllers\PropertyController;
-use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\Tenant\NotificationController;
+use App\Http\Controllers\Tenant\TenantLeaseController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\Webhooks\MpesaWebhookController;
 use App\Http\Controllers\Webhooks\PaypalWebhookController;
+use App\Http\Middleware\IdentifyLandlordSubdomain;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
-| Public Marketing & Legal Pages
+| Subdomain Tenant Portals ({subdomain}.estateos.com)
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', fn () => Inertia::render('welcome'))->name('home');
-Route::get('/pricing/starter', fn () => Inertia::render('pricing/starter'))->name('pricing.starter');
-Route::get('/pricing/operator', fn () => Inertia::render('pricing/operator'))->name('pricing.operator');
-Route::get('/pricing/portfolio', fn () => Inertia::render('pricing/portfolio'))->name('pricing.portfolio');
+/*
+|--------------------------------------------------------------------------
+| Subdomain Tenant Portals ({subdomain}.127.0.0.1.nip.io)
+|--------------------------------------------------------------------------
+*/
 
-Route::prefix('legal')->name('legal.')->group(function () {
-    Route::get('/terms', fn () => Inertia::render('legal/terms'))->name('terms');
-    Route::get('/privacy', fn () => Inertia::render('legal/privacy'))->name('privacy');
-    Route::get('/cookies', fn () => Inertia::render('legal/cookies'))->name('cookies');
-    Route::get('/dpa', fn () => Inertia::render('legal/dpa'))->name('dpa');
-    Route::get('/security', fn () => Inertia::render('legal/security'))->name('security');
-});
+Route::domain('{subdomain}.' . config('app.url_base'))
+    ->middleware(['web', IdentifyLandlordSubdomain::class])
+    ->group(function () {
+        // Public Landlord Portal Landing Page
+        Route::get('/', [LandlordPortalController::class, 'show'])->name('subdomain.portal');
+
+        // Tenant Auth & Onboarding
+        Route::get('/register', [TenantRegisterController::class, 'createTenant'])->name('subdomain.tenant.register');
+        Route::post('/register', [TenantRegisterController::class, 'storeTenant']);
+
+        // Authenticated Tenant Dashboard
+        Route::middleware(['auth', 'verified', 'role:tenant'])->prefix('tenant')->group(function () {
+            Route::get('/', [TenantController::class, 'dashboard'])->name('subdomain.tenant.dashboard');
+        });
+    });
 
 /*
 |--------------------------------------------------------------------------
-| Registration & Onboarding (Accessible by Guests AND Authenticated Users)
+| Public SaaS App & Marketing Pages (Central Domain)
+|--------------------------------------------------------------------------
+*/
+
+// Home / Welcome Page
+Route::get('/', HomeController::class)->name('home');
+
+// Pricing Pages
+Route::prefix('pricing')->name('pricing.')->group(function () {
+    Route::get('/starter', [PricingController::class, 'starter'])->name('starter');
+    Route::get('/operator', [PricingController::class, 'operator'])->name('operator');
+    Route::get('/portfolio', [PricingController::class, 'portfolio'])->name('portfolio');
+    Route::get('/{slug}', [PricingController::class, 'show'])->name('show');
+});
+
+// Subscription
+Route::post('/subscribe', [SubscriptionController::class, 'checkout'])->middleware('auth')->name('subscribe');
+
+// Legal Pages
+Route::prefix('legal')->name('legal.')->controller(LegalController::class)->group(function () {
+    Route::get('/terms', 'terms')->name('terms');
+    Route::get('/privacy', 'privacy')->name('privacy');
+    Route::get('/cookies', 'cookies')->name('cookies');
+    Route::get('/dpa', 'dpa')->name('dpa');
+    Route::get('/security', 'security')->name('security');
+});
+/*
+|--------------------------------------------------------------------------
+| Global Registration & Onboarding
 |--------------------------------------------------------------------------
 */
 
@@ -55,9 +101,15 @@ Route::post('/register/landlord', [LandlordRegisterController::class, 'store']);
 Route::get('/register/tenant', [TenantRegisterController::class, 'createTenant'])->name('register.tenant');
 Route::post('/register/tenant', [TenantRegisterController::class, 'storeTenant']);
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/onboarding/role', [OnboardingController::class, 'showRoleSelection'])->name('onboarding.role');
+    Route::post('/onboarding/role', [OnboardingController::class, 'setRole'])->name('onboarding.role.set');
+});
+ 
+Route::get('/pricing/{slug}', [PlanController::class, 'show'])->name('pricing.show');
 /*
 |--------------------------------------------------------------------------
-| Landlord Dashboard (Auth + Verified + Role: Landlord/Admin/Reviewer)
+| Landlord Dashboard
 |--------------------------------------------------------------------------
 */
 
@@ -69,7 +121,6 @@ Route::middleware(['auth', 'verified', 'role:landlord|admin|reviewer'])
     ->prefix('dashboard')
     ->name('dashboard.')
     ->group(function () {
-        // Properties & Units
         Route::get('/properties', [PropertyController::class, 'index'])->name('properties');
         Route::post('/properties', [PropertyController::class, 'store'])->name('properties.store');
         Route::patch('/properties/{property}', [PropertyController::class, 'update'])->name('properties.update');
@@ -79,57 +130,69 @@ Route::middleware(['auth', 'verified', 'role:landlord|admin|reviewer'])
         Route::patch('/units/{unit}', [UnitController::class, 'update'])->name('units.update');
         Route::delete('/units/{unit}', [UnitController::class, 'destroy'])->name('units.destroy');
 
-        // Tenants & Leases
+        // FIXED: Now correctly targets GET /dashboard/tenants
         Route::get('/tenants', [LeaseController::class, 'index'])->name('tenants');
+
+        // FIXED: Now correctly targets POST /dashboard/leases
         Route::post('/leases', [LeaseController::class, 'store'])->name('leases.store');
         Route::patch('/leases/{lease}', [LeaseController::class, 'update'])->name('leases.update');
 
-        // Operations & Messaging
         Route::get('/finance', [InvoiceController::class, 'index'])->name('finance');
         Route::get('/maintenance', [MaintenanceRequestController::class, 'index'])->name('maintenance');
-        Route::patch('/maintenance/{maintenance_request}', [MaintenanceRequestController::class, 'update'])->name('maintenance.update');
+
+        // routes/web.php
+        Route::patch('/dashboard/maintenance/{maintenanceRequest}/status', [MaintenanceRequestController::class, 'updateStatus'])
+            ->name('maintenance.status.update');
         Route::get('/messages', [ConversationController::class, 'index'])->name('messages');
 
-        // Announcements
+        Route::get('/finance', [LandlordInvoiceController::class, 'index'])->name('finance');
+        Route::post('/invoices', [LandlordInvoiceController::class, 'store'])->name('invoices.store');
+
         Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
         Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
 
-        // Roles & Permissions Management
         Route::get('/roles-permissions', [RolePermissionController::class, 'index'])->name('roles-permissions');
         Route::put('/roles/{role}/permissions', [RolePermissionController::class, 'updateRolePermissions'])->name('roles.update-permissions');
 
-        // Settings & Verification
-        Route::get('/settings', fn () => Inertia::render('dashboard/settings'))->name('settings');
-        Route::get('/verification', fn () => Inertia::render('dashboard/verification'))->name('verification');
+        Route::get('/settings', fn() => Inertia::render('dashboard/settings'))->name('settings');
+        Route::get('/verification', fn() => Inertia::render('dashboard/verification'))->name('verification');
 
-        // Admin User Management
         Route::middleware(['role:admin'])->group(function () {
             Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
             Route::put('/users/{user}/roles', [AdminUserController::class, 'updateRoles'])->name('users.update-roles');
+            Route::put('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
         });
+        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
     });
+
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
+    Route::get('/domains', [DomainManagementController::class, 'index'])->name('admin.domains.index');
+    Route::post('/domains/{domain}/users', [DomainManagementController::class, 'assignUser'])->name('admin.domains.users.assign');
+    Route::delete('/domains/{domain}/users/{user}', [DomainManagementController::class, 'removeUser'])->name('admin.domains.users.remove');
+
+});
 
 /*
 |--------------------------------------------------------------------------
-| Tenant Portal (Auth + Verified + Role: Tenant)
+| Tenant Portal (Central / Direct Fallback)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth'])->group(function () {
-    Route::get('/onboarding/role', [OnboardingController::class, 'showRoleSelection'])->name('onboarding.role');
-    Route::post('/onboarding/role', [OnboardingController::class, 'setRole'])->name('onboarding.role.set');
-});
-Route::middleware(['auth', 'verified', 'role:tenant|reviewer|admin'])
+
+Route::middleware(['auth', 'verified', 'role:tenant'])
     ->prefix('tenant')
     ->name('tenant.')
     ->group(function () {
         Route::get('/', [TenantController::class, 'dashboard'])->name('index');
-        Route::get('/lease', fn () => Inertia::render('tenant/lease'))->name('lease');
+        Route::get('/lease', [TenantLeaseController::class, 'show'])->name('lease');
         Route::get('/pay', [InvoiceController::class, 'index'])->name('pay');
+        Route::get('/invoices/{invoice}/checkout', [InvoiceController::class, 'checkout'])
+            ->name('tenant.invoices.checkout');
         Route::get('/maintenance', [MaintenanceRequestController::class, 'index'])->name('maintenance');
         Route::post('/maintenance', [MaintenanceRequestController::class, 'store'])->name('maintenance.store');
         Route::get('/messages', [ConversationController::class, 'index'])->name('messages');
-        Route::get('/notifications', [NotificationController::class, 'index'])->name('tenant.notifications.index');
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('tenant.notifications.read');
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     });
 
 /*
@@ -148,7 +211,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Document Verification (Encrypted Storage & Access Control)
+| Document Verification
 |--------------------------------------------------------------------------
 */
 
@@ -163,11 +226,11 @@ Route::middleware(['auth', 'verified'])->prefix('id-documents')->name('id-docume
 
 /*
 |--------------------------------------------------------------------------
-| Webhooks (Public Unauthenticated Excluded from CSRF)
+| Webhooks
 |--------------------------------------------------------------------------
 */
 
 Route::post('/webhooks/mpesa', MpesaWebhookController::class)->name('webhooks.mpesa');
 Route::post('/webhooks/paypal', PaypalWebhookController::class)->name('webhooks.paypal');
 
-require __DIR__.'/settings.php';
+require __DIR__ . '/settings.php';

@@ -46,7 +46,11 @@ class HandleInertiaRequests extends Middleware
             ? ($user->account_type ?? (in_array('landlord', $roles) ? 'landlord' : (in_array('tenant', $roles) ? 'tenant' : null)))
             : null;
 
+        // Resolve current domain/subdomain branding context
+        $domainContext = $this->resolveDomainContext($request);
+
         return [
+            'csrf_token' => csrf_token(),
             'honeypot' => [
                 'enabled'            => config('honeypot.enabled'),
                 'nameFieldName'      => config('honeypot.name_field_name'),
@@ -54,8 +58,9 @@ class HandleInertiaRequests extends Middleware
                 'validFrom'          => $honeypot->validFrom(),
             ],
             ...parent::share($request),
-            'name' => config('app.name'),
-            'auth' => [
+            'name'   => config('app.name'),
+            'domain' => $domainContext, // Shared domain metadata (name, logo, etc.)
+            'auth'   => [
                 'user' => $user ? array_merge($user->toArray(), [
                     'roles'            => $roles,
                     'permissions'      => $user->getAllPermissions()->pluck('name')->toArray(),
@@ -86,6 +91,37 @@ class HandleInertiaRequests extends Middleware
                 ])
                 : [],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * Resolve branding details based on request host or subdomain.
+     */
+    protected function resolveDomainContext(Request $request): array
+    {
+        $host = $request->getHost();
+
+        // Extract subdomain prefix if using nips/subdomains (e.g. sunshine.127.0.0.1.nip.io or sunshine.estateos.com)
+        $parts = explode('.', $host);
+        $subdomain = (count($parts) > 2) ? $parts[0] : null;
+
+        if ($subdomain && ! in_array($subdomain, ['www', 'admin', 'app', '127'])) {
+            $landlord = LandlordProfile::where('subdomain', $subdomain)->first();
+
+            if ($landlord) {
+                return [
+                    'name'      => $landlord->company_name ?? $landlord->business_name ?? ucfirst($subdomain),
+                    'logo'      => $landlord->logo_url ?? null,
+                    'subdomain' => $subdomain,
+                ];
+            }
+        }
+
+        // Fallback to default application configuration
+        return [
+            'name'      => config('app.name', 'EstateOS'),
+            'logo'      => null,
+            'subdomain' => null,
         ];
     }
 }

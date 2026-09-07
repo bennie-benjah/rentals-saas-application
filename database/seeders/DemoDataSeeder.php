@@ -24,16 +24,10 @@ class DemoDataSeeder extends Seeder
             return;
         }
 
-        $admin = User::factory()->create([
-            'name' => 'Platform Admin',
-            'email' => 'admin@example.test',
-            'email_verified_at' => now(),
-        ]);
-        $admin->assignRole('admin');
 
         $landlord = User::factory()->create([
             'name' => 'Benjamin Mutula',
-            'email' => 'landlord@example.test',
+            'email' => 'landlord@estateos.test',
             'account_type' => 'landlord',
             'email_verified_at' => now(),
         ]);
@@ -67,6 +61,6 @@ class DemoDataSeeder extends Seeder
         }
 
         $this->command->info('Demo data seeded: 1 admin, 1 landlord, 1 property (6 units), 4 tenants with active leases.');
-        $this->command->info('Login as landlord@example.test or any generated tenant email — check password via tinker if needed (factory default is "password").');
+        $this->command->info('Login as landlord@estateos.test or any generated tenant email — check password via tinker if needed (factory default is "password").');
     }
 }

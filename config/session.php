@@ -156,8 +156,9 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN'),
-
+    'domain' => isset($_SERVER['HTTP_HOST']) && str_contains($_SERVER['HTTP_HOST'], 'nip.io') 
+    ? '.127.0.0.1.nip.io' 
+    : null,
     /*
     |--------------------------------------------------------------------------
     | HTTPS Only Cookies

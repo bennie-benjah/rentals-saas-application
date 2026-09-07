@@ -88,7 +88,33 @@ class ConversationController extends Controller
             'currentUserId' => $user->id,
         ]);
     }
+public function show(Request $request, Conversation $conversation)
+    {
+        Gate::authorize('view', $conversation);
 
+        $user = $request->user();
+
+        // Mark unread messages as read
+        $conversation->messages()
+            ->where('sender_id', '!=', $user->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        $messages = $conversation->messages()
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(fn ($m) => [
+                'id' => $m->id,
+                'sender_id' => $m->sender_id,
+                'from' => $m->sender_id === $user->id ? 'me' : 'them',
+                'body' => $m->body,
+                'time' => $m->created_at->format('g:ia'),
+            ]);
+
+        return response()->json([
+            'messages' => $messages,
+        ]);
+    }
     public function sendMessage(StoreMessageRequest $request, Conversation $conversation)
     {
         Gate::authorize('view', $conversation);

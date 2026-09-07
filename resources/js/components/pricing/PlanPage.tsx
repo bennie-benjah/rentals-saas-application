@@ -1,5 +1,18 @@
 import { Link } from "@inertiajs/react";
-import { ArrowRight, Check, Building2 } from "lucide-react";
+import { ArrowRight, Check, Building2, CheckCircle2 } from "lucide-react";
+
+interface PlanPageProps {
+  name: string;
+  tagline: string;
+  price: string;
+  unit: string;
+  cta: string;
+  features: string[];
+  includes: { t: string; d: string }[];
+  notIncluded?: string[];
+  featured?: boolean;
+  currentPlan?: string | null;
+}
 
 export function PlanPage({
   name,
@@ -11,17 +24,12 @@ export function PlanPage({
   includes,
   notIncluded,
   featured,
-}: {
-  name: string;
-  tagline: string;
-  price: string;
-  unit: string;
-  cta: string;
-  features: string[];
-  includes: { t: string; d: string }[];
-  notIncluded?: string[];
-  featured?: boolean;
-}) {
+  currentPlan,
+}: PlanPageProps) {
+  const isCurrentPlan =
+    currentPlan?.toLowerCase() === name.toLowerCase() ||
+    currentPlan?.toLowerCase() === name.toLowerCase().replace(/\s+/g, "-");
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 glass-panel border-b border-sidebar-border">
@@ -39,9 +47,17 @@ export function PlanPage({
       </header>
 
       <section className="px-5 md:px-8 pt-16 md:pt-24 pb-12 max-w-6xl mx-auto animate-reveal">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          EstateOS · {name}
-        </p>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            EstateOS · {name}
+          </p>
+          {isCurrentPlan && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="size-3.5" /> Your Current Plan
+            </span>
+          )}
+        </div>
+
         <h1 className="font-display text-4xl md:text-6xl font-medium tracking-tight mt-3">{name}</h1>
         <p className="text-base md:text-lg text-muted-foreground mt-4 max-w-2xl">{tagline}</p>
 
@@ -55,15 +71,18 @@ export function PlanPage({
             <span className="text-sm opacity-70">{unit}</span>
           </div>
           <p className="text-sm opacity-80 mt-2">Billed monthly · No setup fees · Cancel anytime</p>
+
           <Link
             href="/dashboard"
             className={`mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-opacity ${
-              featured
+              isCurrentPlan
+                ? "bg-muted text-muted-foreground cursor-default"
+                : featured
                 ? "bg-primary-foreground text-primary hover:opacity-90"
                 : "bg-foreground text-background hover:opacity-90"
             }`}
           >
-            {cta} <ArrowRight className="size-4" />
+            {isCurrentPlan ? "Current Plan Active" : cta} <ArrowRight className="size-4" />
           </Link>
         </div>
       </section>

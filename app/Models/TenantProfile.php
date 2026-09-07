@@ -4,11 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Lease;
+use App\Models\User;
+use App\Models\Plan;
 class TenantProfile extends Model
 {
     protected $fillable = [
-        'user_id', 'dob', 'nationality', 'id_type', 'id_number',
+        'user_id', 'plan_id','dob', 'nationality', 'id_type', 'id_number',
         'employment_status', 'employer', 'job_title', 'monthly_income', 'employed_since', 'employer_phone',
         'prev_address', 'prev_landlord', 'prev_landlord_phone', 'reason_leaving',
         'ref_name', 'ref_phone', 'ref_relation', 'emergency_name', 'emergency_phone',
@@ -27,5 +30,9 @@ class TenantProfile extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+    public function leases(): HasMany
+    {
+        return $this->hasMany(Lease::class, 'tenant_id', 'user_id');
     }
 }

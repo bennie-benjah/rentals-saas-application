@@ -1,7 +1,7 @@
 /**
  * Converted from TanStack Router route: index.tsx (was "/")
  */
-import { Link } from "@inertiajs/react";
+import { Link, usePage } from "@inertiajs/react";
 import {
   ArrowRight,
   Building2,
@@ -15,9 +15,19 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { Moon, Sun } from "lucide-react";
-
-export default function Welcome() {
+interface PlanProp {
+  id: string;
+  href: string;
+  name: string;
+  price: string;
+  unit: string;
+  cta?: string;
+  featured?: boolean;
+  features: string[];
+}
+export default function Welcome({ plans }: { plans: PlanProp[] }) {
   const { dark, toggle } = useTheme();
+  const { auth } = usePage<{ auth: { user: any | null } }>().props;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -36,26 +46,40 @@ export default function Welcome() {
             <Link href="/tenant" className="hover:text-foreground transition-colors">Tenant portal</Link>
           </nav>
           <div className="flex items-center gap-2">
-            <button
-              onClick={toggle}
-              aria-label="Toggle theme"
-              className="size-8 flex items-center justify-center rounded-lg hover:bg-foreground/5 transition-colors"
-            >
-              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            </button>
-            <Link
-              href="/dashboard"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
-            >
-              Get started <ArrowRight className="size-3.5" />
-            </Link>
-          </div>
+      {/* Theme Toggle */}
+      <button
+        onClick={toggle}
+        aria-label="Toggle theme"
+        className="size-8 flex items-center justify-center rounded-lg hover:bg-foreground/5 transition-colors"
+      >
+        {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      </button>
+
+      {/* Conditional Auth Links */}
+      {auth.user ? (
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          <LayoutDashboard className="size-3.5" /> Dashboard
+        </Link>
+      ) : (
+        <>
+          <Link
+            href="/login"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/register"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            Get started <ArrowRight className="size-3.5" />
+          </Link>
+        </>
+      )}
+    </div>
         </div>
       </header>
 
@@ -142,54 +166,54 @@ export default function Welcome() {
 
       {/* Pricing */}
       <section id="pricing" className="px-5 md:px-8 py-20 max-w-6xl mx-auto">
-        <div className="max-w-2xl mb-14">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Pricing</p>
-          <h2 className="font-display text-3xl md:text-4xl font-medium tracking-tight mt-3">
-            Simple, per-unit pricing.
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {[
-            { href: "/pricing/starter", name: "Starter", price: "$2", unit: "/unit/mo", features: ["Up to 25 units", "Maintenance board", "Tenant portal"] },
-            { href: "/pricing/operator", name: "Operator", price: "$4", unit: "/unit/mo", features: ["Unlimited units", "M-Pesa & ACH", "Real-time messaging", "Priority support"], featured: true },
-            { href: "/pricing/portfolio", name: "Portfolio", price: "Custom", unit: "", features: ["SSO & SCIM", "Custom reporting", "Dedicated CSM"] },
-          ].map((p) => (
-            <div
-              key={p.name}
-              className={`p-6 rounded-2xl ring-1 transition-all ${
+      <div className="max-w-2xl mb-14">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Pricing
+        </p>
+        <h2 className="font-display text-3xl md:text-4xl font-medium tracking-tight mt-3">
+          Simple, per-unit pricing.
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {plans.map((p) => (
+          <div
+            key={p.id || p.name}
+            className={`p-6 rounded-2xl ring-1 transition-all ${
+              p.featured
+                ? "bg-primary text-primary-foreground ring-primary"
+                : "bg-surface ring-border"
+            }`}
+          >
+            <h3 className="font-display text-xl font-medium">{p.name}</h3>
+
+            <div className="mt-4 flex items-baseline gap-1">
+              <span className="font-display text-4xl font-medium">{p.price}</span>
+              <span className="text-sm opacity-70">{p.unit}</span>
+            </div>
+
+            <ul className="mt-6 space-y-2.5">
+              {p.features.map((f, idx) => (
+                <li key={idx} className="flex items-center gap-2 text-sm">
+                  <Check className="size-4 opacity-70 shrink-0" /> {f}
+                </li>
+              ))}
+            </ul>
+
+            <Link
+              href={p.href}
+              className={`mt-7 inline-flex w-full items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-opacity ${
                 p.featured
-                  ? "bg-primary text-primary-foreground ring-primary"
-                  : "bg-surface ring-border"
+                  ? "bg-primary-foreground text-primary hover:opacity-90"
+                  : "bg-foreground text-background hover:opacity-90"
               }`}
             >
-              <h3 className="font-display text-xl font-medium">{p.name}</h3>
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="font-display text-4xl font-medium">{p.price}</span>
-                <span className="text-sm opacity-70">{p.unit}</span>
-              </div>
-              <ul className="mt-6 space-y-2.5">
-                {p.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm">
-                    <Check className="size-4 opacity-70" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href={p.href}
-                className={`mt-7 inline-flex w-full items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-opacity ${
-                  p.featured
-                    ? "bg-primary-foreground text-primary hover:opacity-90"
-                    : "bg-foreground text-background hover:opacity-90"
-                }`}
-              >
-                View plan
-              </Link>
-            </div>
-          ))}
-        </div>
-
-      </section>
-
+              {p.cta || "View plan"}
+            </Link>
+          </div>
+        ))}
+      </div>
+    </section>
       {/* Footer */}
       <footer className="border-t border-border px-5 md:px-8 py-10 max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-2.5">

@@ -20,9 +20,16 @@ class StoreLeaseRequest extends FormRequest
             'end_date' => ['nullable', 'date', 'after:start_date'],
             'rent_amount' => ['required', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'size:3'],
-            'billing_cycle' => ['required', 'string', 'in:monthly,quarterly,annual'],
+            'billing_cycle' => ['nullable', 'string', 'in:monthly,quarterly,annual'],
             'billing_day' => ['nullable', 'integer', 'min:1', 'max:28'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'billing_cycle' => $this->billing_cycle ?? 'monthly',
+        ]);
     }
 }

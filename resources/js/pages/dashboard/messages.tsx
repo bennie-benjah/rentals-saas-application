@@ -21,13 +21,22 @@ interface MessageItem {
 
 interface MessagesPageProps {
   conversations?: ConversationItem[];
+  activeConversation?: { id: number; name: string } | null;
+  initialMessages?: MessageItem[];
   currentUserId: number;
 }
 
-function MessagesPage({ conversations = [], currentUserId }: MessagesPageProps) {
+function MessagesPage({
+  conversations = [],
+  activeConversation,
+  initialMessages = [],
+  currentUserId,
+}: MessagesPageProps) {
   const [threads, setThreads] = useState<ConversationItem[]>(conversations);
-  const [activeId, setActiveId] = useState<number | null>(conversations[0]?.id ?? null);
-  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [activeId, setActiveId] = useState<number | null>(
+    activeConversation?.id ?? conversations[0]?.id ?? null
+  );
+  const [messages, setMessages] = useState<MessageItem[]>(initialMessages);
   const [text, setText] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,13 +49,20 @@ function MessagesPage({ conversations = [], currentUserId }: MessagesPageProps) 
     }
   }, [conversations]);
 
-  // Fetch conversation messages using route matching web.php: /conversations/{id}
+  // Fetch conversation messages when activeId changes
   useEffect(() => {
     if (!activeId) return;
 
     setLoading(true);
-    fetch(`/conversations/${activeId}`)
-      .then((res) => res.json())
+    fetch(`/conversations/${activeId}`, {
+      headers: {
+        Accept: "application/json",
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         setMessages(data.messages || []);
         setLoading(false);
@@ -65,9 +81,9 @@ function MessagesPage({ conversations = [], currentUserId }: MessagesPageProps) 
       t.unit.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Send message using route matching web.php: /conversations/{id}/messages
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
+    
     if (!text.trim() || !activeId || sending) return;
 
     const payload = text;
@@ -79,6 +95,7 @@ function MessagesPage({ conversations = [], currentUserId }: MessagesPageProps) 
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
           "X-CSRF-TOKEN":
             (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
         },
@@ -89,7 +106,6 @@ function MessagesPage({ conversations = [], currentUserId }: MessagesPageProps) 
         const newMessage: MessageItem = await response.json();
         setMessages((prev) => [...prev, newMessage]);
 
-        // Update local list preview text
         setThreads((prev) =>
           prev.map((t) =>
             t.id === activeId ? { ...t, last: payload, time: "Just now", unread: false } : t
@@ -137,7 +153,7 @@ function MessagesPage({ conversations = [], currentUserId }: MessagesPageProps) 
                       activeId === t.id ? "bg-foreground/[0.04]" : "hover:bg-foreground/[0.02]"
                     }`}
                   >
-                    <div className="size-9 rounded-full bg-gradient-to-br from-foreground/20 to-foreground/5 shrink-0 relative flex items-center justify-center font-medium text-xs">
+                    <div className="size-9 rounded-full bg-linear-to-br from-foreground/20 to-foreground/5 shrink-0 relative flex items-center justify-center font-medium text-xs">
                       {t.name.charAt(0)}
                       {t.unread && (
                         <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-warning ring-2 ring-surface" />
@@ -163,7 +179,7 @@ function MessagesPage({ conversations = [], currentUserId }: MessagesPageProps) 
           {activeThread ? (
             <>
               <header className="p-4 border-b border-border flex items-center gap-3">
-                <div className="size-10 rounded-full bg-gradient-to-br from-foreground/20 to-foreground/5 flex items-center justify-center font-medium">
+                <div className="size-10 rounded-full bg-linear-to-br from-foreground/20 to-foreground/5 flex items-center justify-center font-medium">
                   {activeThread.name.charAt(0)}
                 </div>
                 <div>
@@ -184,6 +200,7 @@ function MessagesPage({ conversations = [], currentUserId }: MessagesPageProps) 
                 ) : (
                   messages.map((m) => {
                     const isMe = m.sender_id === currentUserId;
+
                     return (
                       <div
                         key={m.id}

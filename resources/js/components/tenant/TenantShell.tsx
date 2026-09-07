@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/hooks/use-theme';
 import { CompleteProfileBanner } from '@/components/CompleteProfileBanner';
+import { SupportDrawer } from '../dashboard/SupportDrawer';
 
 type NavItem = {
     to: string;
@@ -23,6 +24,7 @@ type NavItem = {
     exact?: boolean;
 };
 
+// Menu items remain fixed across all domains
 const mainNav: NavItem[] = [
     { to: '/tenant', icon: Home, label: 'Home', exact: true },
     { to: '/tenant/pay', icon: CreditCard, label: 'Pay Rent' },
@@ -30,6 +32,11 @@ const mainNav: NavItem[] = [
     { to: '/tenant/messages', icon: MessageSquare, label: 'Messages' },
     { to: '/tenant/lease', icon: FileText, label: 'Lease' },
 ];
+
+interface DomainProps {
+    name?: string;
+    logo?: string;
+}
 
 interface UserProps {
     name: string;
@@ -44,10 +51,14 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
     const { dark, toggle } = useTheme();
 
     const auth = props.auth as { user?: UserProps };
+    const domain = (props.domain as DomainProps) || {};
     const user = auth?.user;
 
     const isReviewer = user?.roles?.includes('reviewer');
     const unreadCount = user?.unread_notifications_count || 0;
+
+    const siteName = domain.name || 'EstateOS';
+    const siteLogo = domain.logo;
 
     const handleLogout = () => {
         router.post('/logout');
@@ -62,15 +73,23 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
         <div className="min-h-screen bg-background pb-24 text-foreground md:pb-0 md:pl-64">
             {/* Desktop Sidebar */}
             <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r border-sidebar-border glass-panel md:flex">
-                {/* Header Branding & Notifications */}
+                {/* Header Branding (Domain Specific) */}
                 <div className="flex items-center justify-between p-6">
                     <Link href="/" className="flex items-center gap-3">
-                        <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-                            <Home className="size-4 text-primary-foreground" />
-                        </div>
+                        {siteLogo ? (
+                            <img
+                                src={siteLogo}
+                                alt={siteName}
+                                className="size-8 rounded-lg object-contain"
+                            />
+                        ) : (
+                            <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
+                                <Home className="size-4 text-primary-foreground" />
+                            </div>
+                        )}
                         <div className="flex flex-col leading-tight">
-                            <span className="font-display text-base font-semibold tracking-tight">
-                                EstateOS
+                            <span className="font-display truncate max-w-[120px] text-base font-semibold tracking-tight">
+                                {siteName}
                             </span>
                             <span className="text-[10px] tracking-widest text-muted-foreground uppercase">
                                 Tenant
@@ -108,7 +127,7 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
                     </div>
                 )}
 
-                {/* Main Navigation */}
+                {/* Main Navigation (Identical for all domains) */}
                 <nav className="flex-1 space-y-1 px-4">
                     {mainNav.map(({ to, icon: Icon, label, exact }) => {
                         const active = isActive(to, exact);
@@ -132,7 +151,6 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
 
                 {/* Footer Navigation & User Profile */}
                 <div className="mt-auto space-y-1 border-t border-sidebar-border p-4">
-                    {/* Settings Link */}
                     <Link
                         href="/settings/profile"
                         className={`flex w-full items-center gap-3 rounded-md py-2 pr-3 pl-2 text-xs font-medium transition-all ${
@@ -145,7 +163,6 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
                         <span>Settings</span>
                     </Link>
 
-                    {/* Theme Toggle */}
                     <button
                         onClick={toggle}
                         className="flex w-full items-center gap-3 rounded-md py-2 pr-3 pl-2 text-xs font-medium text-muted-foreground transition-all hover:bg-foreground/[0.03] hover:text-foreground"
@@ -158,7 +175,6 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
                         <span>{dark ? 'Light mode' : 'Dark mode'}</span>
                     </button>
 
-                    {/* Logout Button */}
                     <button
                         onClick={handleLogout}
                         className="flex w-full items-center gap-3 rounded-md py-2 pr-3 pl-2 text-xs font-medium text-muted-foreground transition-all hover:bg-foreground/[0.03] hover:text-foreground"
@@ -167,7 +183,6 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
                         <span>Sign out</span>
                     </button>
 
-                    {/* User Info Card */}
                     <Link
                         href="/settings/profile"
                         className="group mt-1 flex items-center gap-3 rounded-md border-t border-sidebar-border py-2 pt-3 pr-3 pl-2 transition-colors hover:bg-foreground/[0.02]"
@@ -187,15 +202,22 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
                 </div>
             </aside>
 
-            {/* Mobile Header */}
-            {/* Mobile Header */}
+            {/* Mobile Header Branding */}
             <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md md:hidden">
                 <Link href="/" className="flex items-center gap-2">
-                    <div className="flex size-7 items-center justify-center rounded-md bg-primary">
-                        <Home className="size-3.5 text-primary-foreground" />
-                    </div>
-                    <span className="font-display text-sm font-semibold">
-                        EstateOS
+                    {siteLogo ? (
+                        <img
+                            src={siteLogo}
+                            alt={siteName}
+                            className="size-7 rounded-md object-contain"
+                        />
+                    ) : (
+                        <div className="flex size-7 items-center justify-center rounded-md bg-primary">
+                            <Home className="size-3.5 text-primary-foreground" />
+                        </div>
+                    )}
+                    <span className="font-display truncate max-w-[140px] text-sm font-semibold">
+                        {siteName}
                     </span>
                 </Link>
 
@@ -210,7 +232,6 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
                         </Link>
                     )}
 
-                    {/* Mobile Notifications Button */}
                     <Link
                         href="/tenant/notifications"
                         aria-label="Notifications"
@@ -222,7 +243,6 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
                         )}
                     </Link>
 
-                    {/* Mobile Settings Icon Link */}
                     <Link
                         href="/settings/profile"
                         aria-label="Settings"
@@ -256,15 +276,13 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
                 </div>
             </header>
 
-            {/* Completion Banner */}
             <CompleteProfileBanner />
 
-            {/* Main Content Area */}
-            <main className="animate-reveal mx-auto max-w-3xl px-5 py-6 md:px-8 md:py-12">
+            <main className="animate-reveal mx-auto max-w-3xl ~768px px-5 py-6 md:px-10 md:py-12">
                 {children}
             </main>
 
-            {/* Mobile Bottom Navigation Bar */}
+            {/* Mobile Bottom Navigation (Identical for all domains) */}
             <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-sidebar-border glass-panel md:hidden">
                 <div className="flex items-center justify-around px-1 py-1.5">
                     {mainNav.map(({ to, icon: Icon, label, exact }) => {
@@ -287,6 +305,9 @@ export function TenantShell({ children }: { children: React.ReactNode }) {
                     })}
                 </div>
             </nav>
+
+            {/* Floating Support & AI Drawer */}
+            <SupportDrawer />
         </div>
     );
 }

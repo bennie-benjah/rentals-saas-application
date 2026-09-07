@@ -1,5 +1,5 @@
 import { router, usePage } from "@inertiajs/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import RegisterLayout from "@/layouts/register-layout";
 import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +7,11 @@ import { Stepper, Field, inputCls, selectCls } from "@/components/register/Stepp
 import { SecureIdUpload, type StoredDoc } from "@/components/register/SecureIdUpload";
 
 const steps = ["Personal", "Employment", "History", "Apartment", "Agreement"];
+
+type PropertyItem = {
+  id: number | string;
+  name: string;
+};
 
 type Form = {
   // personal
@@ -90,13 +95,38 @@ const initial: Form = {
 };
 
 function TenantRegister() {
-  const { honeypot } = usePage<{ honeypot?: any }>().props;
+  // 1. ALL HOOKS MUST BE DECLARED AT THE TOP OF THE COMPONENT
+  const pageProps = usePage().props as {
+    honeypot?: any;
+    properties?: PropertyItem[];
+    selectedPropertyId?: string | number;
+  };
+
+  const { honeypot, properties = [], selectedPropertyId } = pageProps;
+
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [f, setF] = useState<Form>(initial);
   const [idDocs, setIdDocs] = useState<Record<string, StoredDoc | undefined>>({});
   const [incomeDocs, setIncomeDocs] = useState<Record<string, StoredDoc | undefined>>({});
+
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((p) => ({ ...p, [k]: v }));
+
+  // 2. PREFILL PROPERTY STATE FROM URL PARAMS OR INERTIA PROPS
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const propertyId = params.get("property_id") || selectedPropertyId;
+
+    if (propertyId) {
+      const match = properties.find((p) => String(p.id) === String(propertyId));
+      if (match) {
+        set("property", String(match.id));
+      } else {
+        set("property", String(propertyId));
+      }
+    }
+  }, [properties, selectedPropertyId]);
 
   const idSlots = f.idType === "passport"
     ? [
@@ -120,8 +150,6 @@ function TenantRegister() {
     if (step === 4) return f.bgConsent && f.depositAck && f.rulesAck && f.signature;
     return true;
   };
-
-  const [submitting, setSubmitting] = useState(false);
 
   const next = () => {
     if (!canNext()) return toast.error("Please complete the required fields");
@@ -148,6 +176,7 @@ function TenantRegister() {
     });
   };
 
+  // 3. CONDITIONAL RENDER GOES BELOW ALL HOOK DEFINITIONS
   if (done) {
     return (
       <div className="animate-reveal max-w-lg mx-auto text-center py-10">
@@ -323,12 +352,17 @@ function TenantRegister() {
         {step === 3 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Property" required>
-              <select className={selectCls} value={f.property} onChange={(e) => set("property", e.target.value)}>
+              <select 
+                className={selectCls} 
+                value={f.property || ''} 
+                onChange={(e) => set("property", e.target.value)}
+              >
                 <option value="">Select property…</option>
-                <option>Skyline Heights</option>
-                <option>Timber Loft</option>
-                <option>Harbor View</option>
-                <option>Cedar & Co.</option>
+                {properties.map((prop) => (
+                  <option key={prop.id} value={String(prop.id)}>
+                    {prop.name}
+                  </option>
+                ))}
               </select>
             </Field>
             <Field label="Unit / Apartment #" required>

@@ -1,195 +1,129 @@
-import type { ReactNode } from "react";
-import { useState } from "react";
-import { useForm } from "@inertiajs/react";
-import { Check, CreditCard, Building2, Smartphone, Wallet, AlertCircle } from "lucide-react";
-import TenantLayout from "@/layouts/tenant-layout";
+import { Link } from '@inertiajs/react';
+import { CheckCircle2, CreditCard, Calendar, FileText } from 'lucide-react';
+import type { ReactNode } from 'react';
 
-type Method = "card" | "ach" | "mpesa" | "paypal";
+import TenantLayout from '@/layouts/tenant-layout';
 
-interface InvoiceData {
-  id: number;
-  period: string;
-  dueDateText: string;
-  daysRemaining: number;
-  baseRent: number;
-  utilities: number;
-  totalDue: number;
-  formattedTotal: string;
+interface InvoiceItem {
+    id: number;
+    reference: string;
+    amount_due: string;
+    amount_paid: string;
+    due_date: string;
+    status: string;
+    lease?: {
+        unit?: {
+            name: string;
+            property?: {
+                name: string;
+            };
+        };
+    };
 }
 
-interface PayRentProps {
-  invoice: InvoiceData | null;
-  userPhone?: string;
+interface PayProps {
+    invoices?: InvoiceItem[];
 }
 
-function PayRent({ invoice, userPhone }: PayRentProps) {
-  const [method, setMethod] = useState<Method>("card");
-
-  const { data, setData, post, processing, setData: setFormData } = useForm({
-    invoice_id: invoice?.id ?? 0,
-    method: "card" as Method,
-    phone: userPhone || "+254 ",
-  });
-
-  if (!invoice) {
-    return (
-      <div className="p-8 text-center bg-surface rounded-2xl ring-1 ring-border space-y-3">
-        <Check className="size-8 text-success mx-auto" />
-        <h2 className="font-display text-lg font-medium">All caught up!</h2>
-        <p className="text-sm text-muted-foreground">
-          You have no outstanding invoices or pending payments.
-        </p>
-      </div>
+function Pay({ invoices = [] }: PayProps) {
+    // Filter for actionable invoices (unpaid, partial, or overdue)
+    const pendingInvoices = invoices.filter((inv) =>
+        ['unpaid', 'partial', 'overdue'].includes(inv.status),
     );
-  }
 
-  const handleMethodSelect = (selectedMethod: Method) => {
-    setMethod(selectedMethod);
-    setFormData("method", selectedMethod);
-  };
+    return (
+        <div className="space-y-6">
+            <header>
+                <h1 className="font-display text-2xl font-medium tracking-tight md:text-3xl">
+                    Pay Rent
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                    Manage your outstanding balance and payment history
+                </p>
+            </header>
 
-  const handlePayment = (e: React.FormEvent) => {
-    e.preventDefault();
-    post("/tenant/pay");
-  };
+            {pendingInvoices.length === 0 ? (
+                <div className="space-y-3 rounded-2xl bg-surface p-8 text-center ring-1 ring-border">
+                    <CheckCircle2 className="mx-auto size-10 text-success" />
+                    <h2 className="font-display text-xl font-medium">
+                        All caught up!
+                    </h2>
+                    <p className="mx-auto max-w-sm text-sm text-muted-foreground">
+                        You have no outstanding invoices or pending payments.
+                    </p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    <h2 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+                        Outstanding Invoices
+                    </h2>
+                    <div className="grid gap-4">
+                        {pendingInvoices.map((inv) => {
+                            const due =
+                                parseFloat(inv.amount_due) -
+                                parseFloat(inv.amount_paid);
 
-  // Estimate M-Pesa conversion (e.g. 1 USD = 129 KES)
-  const mpesaAmount = Math.round(invoice.totalDue * 129).toLocaleString();
+                            return (
+                                <div
+                                    key={inv.id}
+                                    className="flex flex-col justify-between gap-4 rounded-2xl bg-surface p-5 ring-1 ring-border sm:flex-row sm:items-center"
+                                >
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs font-medium text-foreground">
+                                                #{inv.reference}
+                                            </span>
+                                            <span
+                                                className={`rounded-full px-2 py-0.5 font-mono text-[10px] uppercase ${
+                                                    inv.status === 'overdue'
+                                                        ? 'bg-destructive/10 text-destructive'
+                                                        : 'bg-warning/10 text-warning'
+                                                }`}
+                                            >
+                                                {inv.status}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm font-medium">
+                                            {inv.lease?.unit?.property?.name ??
+                                                'Property'}{' '}
+                                            · {inv.lease?.unit?.name ?? 'Unit'}
+                                        </p>
+                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                            <span className="flex items-center gap-1">
+                                                <Calendar className="size-3.5" />{' '}
+                                                Due {inv.due_date}
+                                            </span>
+                                        </div>
+                                    </div>
 
-  return (
-    <form onSubmit={handlePayment} className="space-y-8">
-      <header>
-        <h1 className="font-display text-3xl font-medium tracking-tight">Pay rent</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {invoice.period} · {invoice.dueDateText} ({invoice.daysRemaining} days left)
-        </p>
-      </header>
+                                    <div className="flex items-center justify-between gap-2 border-t border-border pt-3 sm:flex-col sm:items-end sm:border-t-0 sm:pt-0">
+                                        <div className="text-left sm:text-right">
+                                            <p className="text-xs text-muted-foreground">
+                                                Amount Due
+                                            </p>
+                                            <p className="font-display text-xl font-medium text-foreground">
+                                                ${due.toFixed(2)}
+                                            </p>
+                                        </div>
 
-      {/* Breakdown */}
-      <section className="p-6 bg-surface rounded-2xl ring-1 ring-border space-y-4">
-        <div className="flex items-baseline justify-between pb-4 border-b border-border">
-          <span className="text-sm text-muted-foreground">Base rent</span>
-          <span className="font-mono text-sm">${invoice.baseRent.toFixed(2)}</span>
+                                        <Link
+                                            href={`/tenant/invoices/${inv.id}/checkout`}
+                                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                                        >
+                                            <CreditCard className="size-3.5" />{' '}
+                                            Pay Now
+                                        </Link>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm text-muted-foreground">Utilities</span>
-          <span className="font-mono text-sm">${invoice.utilities.toFixed(2)}</span>
-        </div>
-        <div className="flex items-baseline justify-between pt-4 border-t border-border">
-          <span className="font-medium">Total due</span>
-          <span className="font-display text-2xl font-medium">{invoice.formattedTotal}</span>
-        </div>
-      </section>
-
-      {/* Payment Options */}
-      <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Payment method
-        </h2>
-        {[
-          { id: "card" as const, icon: CreditCard, label: "Visa •••• 4242", sub: "Instant · 2.9% fee" },
-          { id: "ach" as const, icon: Building2, label: "Bank Checking (ACH)", sub: "1–2 days · no fee" },
-          { id: "mpesa" as const, icon: Smartphone, label: "M-Pesa", sub: "Instant · 1.5% fee · KES" },
-          { id: "paypal" as const, icon: Wallet, label: "PayPal", sub: "Instant · 3.49% + fixed fee" },
-        ].map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => handleMethodSelect(m.id)}
-            className={`w-full flex items-center gap-4 p-4 rounded-2xl ring-1 transition-all ${
-              method === m.id ? "bg-surface ring-foreground/30" : "bg-surface ring-border hover:ring-foreground/15"
-            }`}
-          >
-            <div
-              className={`size-10 rounded-xl flex items-center justify-center ${
-                m.id === "mpesa"
-                  ? "bg-success/10 text-success"
-                  : m.id === "paypal"
-                  ? "bg-[#003087]/10 text-[#003087]"
-                  : "bg-muted"
-              }`}
-            >
-              <m.icon className="size-4" />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium">{m.label}</p>
-              <p className="text-xs text-muted-foreground">{m.sub}</p>
-            </div>
-            <div
-              className={`size-5 rounded-full ring-1 flex items-center justify-center transition-all ${
-                method === m.id ? "bg-foreground ring-foreground" : "ring-border"
-              }`}
-            >
-              {method === m.id && <Check className="size-3 text-background" />}
-            </div>
-          </button>
-        ))}
-      </section>
-
-      {/* Method specific fields */}
-      {method === "mpesa" && (
-        <section className="p-5 bg-success/5 ring-1 ring-success/20 rounded-2xl space-y-3 animate-reveal">
-          <label className="text-xs font-semibold uppercase tracking-widest text-success">
-            M-Pesa number
-          </label>
-          <input
-            value={data.phone}
-            onChange={(e) => setData("phone", e.target.value)}
-            inputMode="tel"
-            required
-            className="w-full px-4 py-3 bg-background rounded-xl ring-1 ring-border outline-none text-sm font-mono"
-          />
-          <p className="text-xs text-muted-foreground">
-            You'll receive an STK push prompt on this number for KES {mpesaAmount}.
-          </p>
-        </section>
-      )}
-
-      {method === "paypal" && (
-        <section className="p-5 bg-primary/5 ring-1 ring-primary/20 rounded-2xl space-y-3 animate-reveal">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 min-w-[4px] h-4 rounded-full bg-primary" />
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                PayPal charges a transaction fee of <strong className="text-foreground">3.49% + fixed fee</strong>.
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Dynamic Submit Button */}
-      {method === "mpesa" ? (
-        <button
-          type="submit"
-          disabled={processing}
-          className="w-full py-3.5 bg-success text-background rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
-        >
-          <Smartphone className="size-4" />
-          {processing ? "Sending STK push..." : `Pay with M-Pesa · ${invoice.formattedTotal}`}
-        </button>
-      ) : method === "paypal" ? (
-        <button
-          type="submit"
-          disabled={processing}
-          className="w-full py-3.5 bg-[#003087] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
-        >
-          <Wallet className="size-4" />
-          {processing ? "Redirecting..." : `Pay with PayPal · ${invoice.formattedTotal}`}
-        </button>
-      ) : (
-        <button
-          type="submit"
-          disabled={processing}
-          className="w-full py-3.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
-        >
-          {processing ? "Processing..." : `Confirm payment of ${invoice.formattedTotal}`}
-        </button>
-      )}
-    </form>
-  );
+    );
 }
 
-export default PayRent;
+export default Pay;
 
-PayRent.layout = (page: ReactNode) => <TenantLayout>{page}</TenantLayout>;
+Pay.layout = (page: ReactNode) => <TenantLayout>{page}</TenantLayout>;

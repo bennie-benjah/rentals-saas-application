@@ -1,9 +1,11 @@
-const kpis = [
-  { label: "Occupancy Rate", value: "94.2%", delta: "+1.2%", tone: "success" as const },
-  { label: "Monthly Revenue", value: "$124.8k", delta: "+4.3%", tone: "success" as const },
-  { label: "Active Tenants", value: "312", delta: "Stable", tone: "muted" as const },
-  { label: "Open Tickets", value: "18", delta: "-2 today", tone: "warning" as const },
-];
+// components/dashboard/KpiGrid.tsx
+
+interface KpiStats {
+  occupancyRate?: string;
+  monthlyRevenue?: string;
+  activeTenants?: string;
+  openTickets?: string;
+}
 
 const toneClass = {
   success: "text-success",
@@ -11,7 +13,34 @@ const toneClass = {
   muted: "text-muted-foreground",
 };
 
-export function KpiGrid() {
+export function KpiGrid({ stats }: { stats?: KpiStats }) {
+  const kpis = [
+    {
+      label: "Occupancy Rate",
+      value: stats?.occupancyRate ?? "0%",
+      delta: "Active units ratio",
+      tone: "success" as const,
+    },
+    {
+      label: "Monthly Revenue",
+      value: stats?.monthlyRevenue ?? "$0.0k",
+      delta: "Collected MTD",
+      tone: "success" as const,
+    },
+    {
+      label: "Active Tenants",
+      value: stats?.activeTenants ?? "0",
+      delta: "Active leases",
+      tone: "muted" as const,
+    },
+    {
+      label: "Open Tickets",
+      value: stats?.openTickets ?? "0",
+      delta: "Needs attention",
+      tone: "warning" as const,
+    },
+  ];
+
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {kpis.map((k) => (
@@ -23,7 +52,9 @@ export function KpiGrid() {
             {k.label}
           </span>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-display font-medium tracking-tight">{k.value}</span>
+            <span className="text-3xl font-display font-medium tracking-tight">
+              {k.value}
+            </span>
             <span className={`text-xs ${toneClass[k.tone]}`}>{k.delta}</span>
           </div>
         </div>

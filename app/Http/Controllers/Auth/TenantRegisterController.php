@@ -19,11 +19,25 @@ use Inertia\Inertia;
 use Inertia\Response;
 class TenantRegisterController extends Controller
 {
-    
-    public function createTenant(): Response
-    {
-        return Inertia::render('register/tenant'); // Adjust path to match your React component
+
+   public function createTenant(Request $request): Response
+{
+    // Retrieve current landlord set by IdentifyLandlordSubdomain middleware
+    $landlordProfile = $request->attributes->get('currentLandlord');
+
+    // If on a subdomain, filter properties by that landlord; otherwise fetch all
+    if ($landlordProfile) {
+        $properties = Property::where('landlord_id', $landlordProfile->user_id)
+            ->get(['id', 'name']);
+    } else {
+        $properties = Property::select('id', 'name')->get();
     }
+
+    return Inertia::render('register/tenant', [
+        'properties' => $properties,
+        'selectedPropertyId' => $request->query('property_id'),
+    ]);
+}
     public function storeTenant(Request $request): RedirectResponse
     {
         $data = $request->validate([

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-else;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -36,7 +35,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // Always redirect newly registered users to the role choice onboarding page
+        // Redirect newly registered users directly to the role onboarding page
         return redirect()->route('onboarding.role');
     }
 }

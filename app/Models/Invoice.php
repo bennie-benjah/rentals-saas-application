@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Illuminate\Support\Str;
+
 
 class Invoice extends Model
 {
@@ -45,4 +48,28 @@ class Invoice extends Model
             $this->update(['status' => 'partial']);
         }
     }
+    public function tenant(): HasOneThrough
+{
+    return $this->hasOneThrough(
+        User::class,  // Target model
+        Lease::class, // Intermediate model
+        'id',         // Foreign key on leases table...
+        'id',         // Foreign key on users table...
+        'lease_id',   // Local key on invoices table...
+        'tenant_id'   // Local key on leases table...
+    );
+}
+    protected static function booted(): void
+{
+    static::creating(function ($invoice) {
+        if (empty($invoice->reference)) {
+            $invoice->reference = 'INV-' . strtoupper(Str::random(8));
+        }
+
+        // Ensure status matches schema requirements
+        if ($invoice->status === 'pending') {
+            $invoice->status = 'unpaid'; // Or 'PENDING' depending on your schema
+        }
+    });
+}
 }

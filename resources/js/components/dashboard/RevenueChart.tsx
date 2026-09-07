@@ -1,3 +1,4 @@
+import { router } from "@inertiajs/react";
 import { useState } from "react";
 
 export interface RevenueChartItem {
@@ -9,10 +10,23 @@ export interface RevenueChartItem {
 
 interface RevenueChartProps {
   chartData?: RevenueChartItem[];
+  currentRange?: "12M" | "30D";
 }
 
-export function RevenueChart({ chartData = [] }: RevenueChartProps) {
-  const [range, setRange] = useState<"12M" | "30D">("12M");
+export function RevenueChart({
+  chartData = [],
+  currentRange = "12M",
+}: RevenueChartProps) {
+  const [range, setRange] = useState<"12M" | "30D">(currentRange);
+
+  const handleRangeChange = (newRange: "12M" | "30D") => {
+    setRange(newRange);
+    router.get(
+      "/dashboard",
+      { range: newRange },
+      { preserveState: true, preserveScroll: true, only: ["chartData"] }
+    );
+  };
 
   const peakItem = chartData.find((d) => d.peak);
 
@@ -29,7 +43,7 @@ export function RevenueChart({ chartData = [] }: RevenueChartProps) {
           {(["12M", "30D"] as const).map((r) => (
             <button
               key={r}
-              onClick={() => setRange(r)}
+              onClick={() => handleRangeChange(r)}
               className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
                 range === r
                   ? "bg-surface text-foreground shadow-sm"

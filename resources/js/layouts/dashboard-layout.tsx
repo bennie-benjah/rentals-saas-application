@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { CompleteProfileBanner } from "@/components/CompleteProfileBanner";
+import { SupportDrawer } from "@/components/dashboard/SupportDrawer";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TopBar } from "@/components/dashboard/TopBar";
 import { UpgradeDialog } from "@/components/dashboard/UpgradeDialog";
@@ -23,6 +24,8 @@ function DashboardLayout({ children }: { children: ReactNode }) {
         </main>
         <UpgradeDialog />
         <Toaster />
+        {/* Floating Support & AI Button */}
+      <SupportDrawer />
       </div>
     </PlanProvider>
   );

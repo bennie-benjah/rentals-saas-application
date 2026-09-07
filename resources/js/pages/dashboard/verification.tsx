@@ -66,6 +66,7 @@ function VerificationPage() {
     try {
       const { url } = await sign({ data: { id, asDownload: download } });
       window.open(url, "_blank", "noopener,noreferrer");
+      
       if (selected?.id === id) {
         const fresh = await getLog({ data: { documentId: id } });
         setLog(fresh);
@@ -77,6 +78,7 @@ function VerificationPage() {
 
   const decide = async (decision: "approved" | "rejected") => {
     if (!selected) return;
+
     try {
       await review({ data: { id: selected.id, decision, notes: notes.trim() || undefined } });
       toast.success(`Document ${decision}`);

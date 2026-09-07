@@ -6,12 +6,14 @@ import {
     Wrench,
     MessageSquare,
     Wallet,
+    FileText, // Added FileText icon for Reports
     Settings,
     ShieldCheck,
     UserCircle2,
     LogOut,
     X,
     Lock,
+    Globe,
 } from 'lucide-react';
 
 type NavItem = {
@@ -19,8 +21,8 @@ type NavItem = {
     icon: typeof Building2;
     label: string;
     exact?: boolean;
-    permission?: string; // Optional Spatie permission requirement
-    roles?: string[]; // Optional Spatie role restriction
+    permission?: string;
+    roles?: string[];
 };
 
 const nav: NavItem[] = [
@@ -35,19 +37,26 @@ const nav: NavItem[] = [
     { to: '/dashboard/maintenance', icon: Wrench, label: 'Maintenance' },
     { to: '/dashboard/messages', icon: MessageSquare, label: 'Messages' },
     { to: '/dashboard/finance', icon: Wallet, label: 'Finance' },
+    { to: '/dashboard/reports', icon: FileText, label: 'Reports' }, // Added Reports item
     { to: '/dashboard/verification', icon: ShieldCheck, label: 'Verification' },
     {
         to: '/dashboard/users',
         icon: Users,
         label: 'Users',
-        roles: ['admin'], // Restricted to admin users
+        roles: ['admin'],
+    },
+    {
+        to: '/admin/domains',
+        icon: Globe,
+        label: 'Domains',
+        roles: ['admin'],
     },
     { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
     {
         to: '/dashboard/roles-permissions',
         icon: Lock,
         label: 'Roles & Permissions',
-        roles: ['admin', 'landlord'],
+        roles: ['admin'],
     },
 ];
 
@@ -80,13 +89,10 @@ export function Sidebar({
     const userRoles = user.roles || [];
     const userPermissions = user.permissions || [];
 
-    // Filter navigation items based on roles and permissions
     const visibleNav = nav.filter((item) => {
-        // 1. Check role restriction
         if (item.roles && !item.roles.some((r) => userRoles.includes(r))) {
             return false;
         }
-        // 2. Check permission restriction
 
         if (item.permission && !userPermissions.includes(item.permission)) {
             return false;
@@ -156,7 +162,7 @@ export function Sidebar({
                             className={`flex w-full items-center gap-3 rounded-md py-2 pr-3 pl-2 text-sm font-medium transition-all duration-200 ${
                                 active
                                     ? 'bg-foreground/5 text-foreground'
-                                    : 'text-muted-foreground hover:bg-foreground/[0.03] hover:text-foreground'
+                                    : 'text-muted-foreground hover:bg-foreground/3 hover:text-foreground'
                             }`}
                         >
                             <Icon className="size-4" />
@@ -184,22 +190,22 @@ export function Sidebar({
                 </button>
 
                 <Link
-    href={`/settings/profile/${user.id}`}
-    onClick={onClose}
-    className="group mt-1 flex cursor-pointer items-center gap-3 rounded-lg border-t border-sidebar-border py-2 pt-3 pr-3 pl-2 transition-all hover:bg-foreground/[0.03]"
->
-    <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-foreground/20 to-foreground/5 text-[11px] font-medium transition-transform group-hover:scale-105">
-        {initials}
-    </div>
-    <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-medium leading-tight transition-colors group-hover:text-primary">
-            {user.name ?? 'User'}
-        </span>
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {roleLabel}
-        </span>
-    </div>
-</Link>
+                    href={`/settings/profile/${user.id}`}
+                    onClick={onClose}
+                    className="group mt-1 flex cursor-pointer items-center gap-3 rounded-lg border-t border-sidebar-border py-2 pt-3 pr-3 pl-2 transition-all hover:bg-foreground/[0.03]"
+                >
+                    <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-foreground/20 to-foreground/5 text-[11px] font-medium transition-transform group-hover:scale-105">
+                        {initials}
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-sm font-medium leading-tight transition-colors group-hover:text-primary">
+                            {user.name ?? 'User'}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {roleLabel}
+                        </span>
+                    </div>
+                </Link>
             </div>
         </>
     );
